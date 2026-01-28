@@ -1,0 +1,81 @@
+#!/bin/sh
+set -eu
+
+CONFIG="${1:-Release}"
+
+# Load container configuration
+if [ -f "container-config.env" ]; then
+    echo "Loading container configuration..."
+    . ./container-config.env
+fi
+
+# Read tag from environment, config file, or use default
+TAG="${CONTAINER_TAG:-latest}"
+
+# Read repo from environment, config file, or use default
+REPO="${CONTAINER_REPO:-mungert/flask-cache-server}"
+
+echo "Building NetworkMonitorCacheHttp container: $REPO:$TAG  (CONFIG=$CONFIG)"
+
+# Validate required files exist
+if [ ! -f "Dockerfile" ]; then
+    echo "Error: Dockerfile not found"
+    exit 1
+fi
+
+if [ ! -f "requirements.txt" ]; then
+    echo "Error: requirements.txt not found"
+    exit 1
+fi
+
+if [ ! -f "app.py" ]; then
+    echo "Error: app.py not found"
+    exit 1
+fi
+
+# Build the Docker image
+echo "Building Docker image..."
+docker build \
+    -t "$REPO:$TAG" \
+    -t "$REPO:latest" \
+    .
+
+echo "Docker image built successfully: $REPO:$TAG"
+
+# Test the container (optional)
+if [ "${TEST_CONTAINER:-false}" = "true" ]; then
+    echo "Testing container..."
+    
+    # Run container in background for testing
+    CONTAINER_ID=$(docker run -d \
+        -p 5000:5000 \
+        -e API_KEY="test-api-key" \
+        -e FLASK_ENV="development" \
+        -e FLASK_DEBUG="true" \
+        "$REPO:$TAG")
+    
+    # Wait for container to start
+    sleep 5
+    
+    # Test health endpoint
+    if curl -f http://localhost:5000/health > /dev/null 2>&1; then
+        echo "Container health check passed"
+    else
+        echo "Container health check failed"
+        docker stop "$CONTAINER_ID" > /dev/null 2>&1
+        docker rm "$CONTAINER_ID" > /dev/null 2>&1
+        exit 1
+    fi
+    
+    # Stop and remove test container
+    docker stop "$CONTAINER_ID" > /dev/null 2>&1
+    docker rm "$CONTAINER_ID" > /dev/null 2>&1
+    echo "Container test completed successfully"
+fi
+
+echo "Build completed successfully!"
+echo "To run the container:"
+echo "  docker run -p 5000:5000 -e API_KEY=your-api-key $REPO:$TAG"
+echo ""
+echo "Or use docker-compose:"
+echo "  docker-compose -f docker-compose-run-cachehttp-dev.yml up -d"
