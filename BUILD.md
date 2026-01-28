@@ -84,7 +84,7 @@ docker run -p 5000:5000 \
 
 ### Docker Compose
 ```bash
-docker-compose -f docker-compose-run-cachehttp-dev.yml up -d
+docker-compose up -d
 ```
 
 ## Security Notes

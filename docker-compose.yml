@@ -1,20 +1,21 @@
 version: '3.8'
 
 services:
-  flask-cache-server:
-    build: .
+  networkmonitorcachehttp:
+    image: mungert/networkmonitorcachehttp:1.0.0
     ports:
       - "5000:5000"
+    env_file:
+      - ${FILES_DIR}/domain-env
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=False
-      - API_KEY=your-secure-api-key-here
       - CACHE_DIR=/app/cache_files
       - MAX_FILE_SIZE=5242880000  # 5000MB in bytes
       - LOG_LEVEL=INFO
       - CORS_ORIGINS=*
     volumes:
-      - ./cache_files:/app/cache_files
+      - ~/cache-ir:/app/cache_files
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
@@ -38,7 +39,7 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro  # For SSL certificates
     depends_on:
-      - flask-cache-server
+      - networkmonitorcachehttp
     restart: unless-stopped
     profiles:
       - production  # Use with: docker-compose --profile production up
