@@ -6,14 +6,11 @@ This script tests all the main endpoints of the cache server to ensure they work
 """
 
 import requests
-import os
-import tempfile
 import hashlib
 
 # Configuration
 BASE_URL = "http://localhost:5000"
 API_KEY = "test-api-key"
-TEST_FILENAME = "test-context-file"
 TEST_CONTENT = b"This is a test LLM context file content for testing the cache server functionality."
 
 def get_test_hash(content):
@@ -42,13 +39,12 @@ def test_file_check():
     test_hash = get_test_hash(TEST_CONTENT)
     
     try:
-        response = requests.get(
-            f"{BASE_URL}/api/cache/{TEST_FILENAME}/{test_hash}",
+        response = requests.head(
+            f"{BASE_URL}/cache/{test_hash}",
             headers={"X-API-Key": API_KEY}
         )
-        if response.status_code == 200:
-            result = response.json()
-            print(f"✅ File check passed: exists = {result.get('exists')}")
+        if response.status_code in (200, 404):
+            print(f"✅ File check passed: status = {response.status_code}")
             return True
         else:
             print(f"❌ File check failed: {response.status_code}")
@@ -63,25 +59,12 @@ def test_file_upload():
     test_hash = get_test_hash(TEST_CONTENT)
     
     try:
-        # Create a temporary file
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_file.write(TEST_CONTENT)
-            temp_file_path = temp_file.name
-        
-        with open(temp_file_path, 'rb') as file:
-            files = {'file': (TEST_FILENAME, file)}
-            data = {'hash': test_hash}
-            
-            response = requests.post(
-                f"{BASE_URL}/api/cache/{TEST_FILENAME}/{test_hash}",
-                headers={"X-API-Key": API_KEY},
-                files=files,
-                data=data
-            )
-        
-        # Clean up temp file
-        os.unlink(temp_file_path)
-        
+        response = requests.put(
+            f"{BASE_URL}/cache/{test_hash}",
+            headers={"X-API-Key": API_KEY},
+            data=TEST_CONTENT
+        )
+
         if response.status_code == 200:
             result = response.json()
             print(f"✅ File upload passed: {result}")
@@ -101,7 +84,7 @@ def test_file_download():
     
     try:
         response = requests.get(
-            f"{BASE_URL}/api/cache/{TEST_FILENAME}/{test_hash}/download",
+            f"{BASE_URL}/cache/{test_hash}",
             headers={"X-API-Key": API_KEY}
         )
         if response.status_code == 200:
@@ -124,7 +107,7 @@ def test_list_files():
     print("Testing file listing...")
     try:
         response = requests.get(
-            f"{BASE_URL}/api/cache/files",
+            f"{BASE_URL}/cache/files",
             headers={"X-API-Key": API_KEY}
         )
         if response.status_code == 200:
@@ -142,10 +125,10 @@ def test_file_delete():
     """Test deleting a file."""
     print("Testing file deletion...")
     test_hash = get_test_hash(TEST_CONTENT)
-    
+
     try:
         response = requests.delete(
-            f"{BASE_URL}/api/cache/{TEST_FILENAME}/{test_hash}",
+            f"{BASE_URL}/cache/{test_hash}",
             headers={"X-API-Key": API_KEY}
         )
         if response.status_code == 200:
@@ -163,7 +146,7 @@ def test_unauthorized_access():
     """Test unauthorized access."""
     print("Testing unauthorized access...")
     try:
-        response = requests.get(f"{BASE_URL}/api/cache/test/test")
+        response = requests.get(f"{BASE_URL}/cache/test")
         if response.status_code == 401:
             print("✅ Unauthorized access correctly blocked")
             return True

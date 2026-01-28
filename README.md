@@ -4,9 +4,9 @@ A simple HTTP cache server designed to store and serve LLM context files for the
 
 ## 🚀 Features
 
-- **File Existence Check**: Check if a file exists in the cache by filename and hash
+- **File Existence Check**: Check if a file exists in the cache by hash
 - **File Upload**: Upload files to the cache with hash validation
-- **File Download**: Download files from the cache
+- **File Download**: Download files from the cache by hash
 - **Authentication**: API key-based authentication for all endpoints
 - **Security**: File path sanitization and size limits
 - **Logging**: Comprehensive request/response logging
@@ -86,32 +86,22 @@ Returns server health status and cache statistics.
 
 ### Check File Existence
 ```http
-GET /api/cache/{filename}/{hash}
+HEAD /cache/{hash}
 Headers: X-API-Key: your-api-key
 ```
-Returns whether a file exists in the cache.
-
-**Response:**
-```json
-{
-  "filename": "context-file",
-  "hash": "sha256-hash",
-  "exists": true
-}
-```
+Returns `200` if the file exists, `404` if it does not.
 
 ### Upload File
 ```http
-POST /api/cache/{filename}/{hash}
+PUT /cache/{hash}
 Headers: X-API-Key: your-api-key
-Body: multipart/form-data with 'file' field
+Body: raw bytes
 ```
 Uploads a file to the cache with hash validation.
 
 **Response:**
 ```json
 {
-  "filename": "context-file",
   "hash": "sha256-hash",
   "size": 1024000,
   "success": true
@@ -120,7 +110,7 @@ Uploads a file to the cache with hash validation.
 
 ### Download File
 ```http
-GET /api/cache/{filename}/{hash}/download
+GET /cache/{hash}
 Headers: X-API-Key: your-api-key
 ```
 Downloads a file from the cache.
@@ -129,7 +119,7 @@ Downloads a file from the cache.
 
 ### List Files
 ```http
-GET /api/cache/files
+GET /cache/files
 Headers: X-API-Key: your-api-key
 ```
 Lists all cached files with metadata.
@@ -150,7 +140,7 @@ Lists all cached files with metadata.
 
 ### Delete File
 ```http
-DELETE /api/cache/{filename}/{hash}
+DELETE /cache/{hash}
 Headers: X-API-Key: your-api-key
 ```
 Deletes a file from the cache.
@@ -158,7 +148,6 @@ Deletes a file from the cache.
 **Response:**
 ```json
 {
-  "filename": "context-file",
   "hash": "sha256-hash",
   "deleted": true
 }
@@ -201,7 +190,7 @@ Configure NetworkMonitorLLM to use this cache server by updating the `appsetting
   "RemoteCache": {
     "Enabled": true,
     "Type": "Http",
-    "BaseUrl": "http://localhost:5000/api",
+    "BaseUrl": "http://localhost:5000",
     "ApiKey": "your-secure-api-key-here"
   }
 }
@@ -252,22 +241,22 @@ The server returns appropriate HTTP status codes:
 
 2. **Check file existence:**
    ```bash
-   curl -H "X-API-Key: your-api-key" \
-        http://localhost:5000/api/cache/test-file/abc123
+   curl -I -H "X-API-Key: your-api-key" \
+        http://localhost:5000/cache/abc123
    ```
 
 3. **Upload a file:**
    ```bash
-   curl -X POST \
+   curl -X PUT \
         -H "X-API-Key: your-api-key" \
-        -F "file=@/path/to/file" \
-        http://localhost:5000/api/cache/test-file/abc123
+        --data-binary @/path/to/file \
+        http://localhost:5000/cache/abc123
    ```
 
 4. **Download a file:**
    ```bash
    curl -H "X-API-Key: your-api-key" \
-        http://localhost:5000/api/cache/test-file/abc123/download \
+        http://localhost:5000/cache/abc123 \
         -o downloaded-file
    ```
 
