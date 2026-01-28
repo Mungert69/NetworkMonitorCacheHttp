@@ -79,6 +79,6 @@ echo "🔗 For NetworkMonitorLLM integration, update appsettings.json:"
 echo '   "RemoteCache": {'
 echo '     "Enabled": true,'
 echo '     "Type": "Http",'
-echo '     "BaseUrl": "http://localhost:5000",'
+echo '     "BaseUrl": "http://localhost:5000/api",'
 echo '     "ApiKey": "your-secure-api-key-here"'
 echo '   }'
