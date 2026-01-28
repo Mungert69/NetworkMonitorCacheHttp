@@ -10,7 +10,7 @@ services:
       - FLASK_DEBUG=False
       - API_KEY=your-secure-api-key-here
       - CACHE_DIR=/app/cache_files
-      - MAX_FILE_SIZE=524288000  # 500MB in bytes
+      - MAX_FILE_SIZE=5242880000  # 5000MB in bytes
       - LOG_LEVEL=INFO
       - CORS_ORIGINS=*
     volumes:
