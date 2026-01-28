@@ -26,23 +26,26 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
+# Get the current configuration
+current_config = config.get_config()
+
 # Configuration
-app.config.from_object(config)
+app.config.from_object(current_config)
 
 # Ensure cache directory exists
-os.makedirs(app.config['CACHE_DIR'], exist_ok=True)
+os.makedirs(current_config.CACHE_DIR, exist_ok=True)
 
 def validate_api_key():
     """Validate API key from request headers."""
     api_key = request.headers.get('X-API-Key')
-    if not api_key or api_key != app.config['API_KEY']:
+    if not api_key or api_key != current_config.API_KEY:
         logger.warning(f"Invalid API key attempt: {api_key}")
         abort(401, description="Invalid API key")
 
 def get_hash_only_path(file_hash):
     """Get the full path for a hash-only cached file."""
     safe_hash = secure_filename(file_hash)
-    return os.path.join(app.config['CACHE_DIR'], f"context.{safe_hash}")
+    return os.path.join(current_config.CACHE_DIR, f"context.{safe_hash}")
 
 @app.before_request
 def before_request():
@@ -55,8 +58,8 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.utcnow().isoformat(),
-        'cache_dir': app.config['CACHE_DIR'],
-        'files_count': len(os.listdir(app.config['CACHE_DIR']))
+        'cache_dir': current_config.CACHE_DIR,
+        'files_count': len(os.listdir(current_config.CACHE_DIR))
     })
 
 @app.route('/cache/<file_hash>', methods=['HEAD'])
@@ -83,6 +86,12 @@ def upload_file(file_hash):
         if not file_content:
             logger.warning(f"No file content provided for legacy upload: {file_hash}")
             return jsonify({'error': 'No file content provided'}), 400
+        file_size = len(file_content)
+        if file_size > current_config.MAX_CONTENT_LENGTH:
+            logger.warning(
+                f"File too large for upload: {file_hash} ({file_size} bytes > {current_config.MAX_CONTENT_LENGTH} bytes)"
+            )
+            return jsonify({'error': f'File too large. Maximum size: {current_config.MAX_CONTENT_LENGTH} bytes'}), 413
 
         calculated_hash = hashlib.sha256(file_content).hexdigest()
         if calculated_hash != file_hash:
@@ -95,7 +104,6 @@ def upload_file(file_hash):
 
         file_size = len(file_content)
         logger.info(f"Successfully uploaded legacy file: {file_hash} ({file_size} bytes)")
-
         return jsonify({
             'hash': file_hash,
             'size': file_size,
@@ -161,8 +169,8 @@ def list_files():
     
     try:
         files = []
-        for filename in os.listdir(app.config['CACHE_DIR']):
-            file_path = os.path.join(app.config['CACHE_DIR'], filename)
+        for filename in os.listdir(current_config.CACHE_DIR):
+            file_path = os.path.join(current_config.CACHE_DIR, filename)
             if os.path.isfile(file_path):
                 stat = os.stat(file_path)
                 files.append({
@@ -194,12 +202,15 @@ def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    logger.info(f"Starting Flask Cache Server on port {app.config['PORT']}")
-    logger.info(f"Cache directory: {app.config['CACHE_DIR']}")
-    logger.info(f"API Key: {app.config['API_KEY'][:4]}***")
+    # Get the current configuration
+    current_config = config.get_config()
+    
+    logger.info(f"Starting Flask Cache Server on port {current_config.PORT}")
+    logger.info(f"Cache directory: {current_config.CACHE_DIR}")
+    logger.info(f"API Key: {current_config.API_KEY[:4]}***")
     
     app.run(
         host='0.0.0.0',
-        port=app.config['PORT'],
-        debug=app.config['DEBUG']
+        port=current_config.PORT,
+        debug=current_config.DEBUG
     )
