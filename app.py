@@ -102,16 +102,10 @@ def upload_file(filename, file_hash):
             )
             return jsonify({'error': f'File too large. Maximum size: {current_config.MAX_CONTENT_LENGTH} bytes'}), 413
 
+        file_content = file.read()
         provided_hash = request.form.get('hash')
         if provided_hash and provided_hash != file_hash:
             logger.warning(f"Hash mismatch for {filename}: provided={provided_hash}, expected={file_hash}")
-            return jsonify({'error': 'Hash mismatch'}), 400
-
-        file_content = file.read()
-
-        calculated_hash = hashlib.sha256(file_content).hexdigest()
-        if calculated_hash != file_hash:
-            logger.warning(f"Hash mismatch for {filename}: calculated={calculated_hash}, expected={file_hash}")
             return jsonify({'error': 'Hash mismatch'}), 400
 
         file_path = get_file_path(filename, file_hash)
