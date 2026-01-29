@@ -45,7 +45,8 @@ def validate_api_key():
 def get_file_path(filename, file_hash):
     """Get the full path for a cached file."""
     safe_filename = secure_filename(filename)
-    return os.path.join(current_config.CACHE_DIR, f"{safe_filename}.{file_hash}")
+    safe_hash = secure_filename(file_hash)
+    return os.path.join(current_config.CACHE_DIR, safe_filename, safe_hash)
 
 @app.before_request
 def before_request():
@@ -114,6 +115,7 @@ def upload_file(filename, file_hash):
             return jsonify({'error': 'Hash mismatch'}), 400
 
         file_path = get_file_path(filename, file_hash)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'wb') as f:
             f.write(file_content)
 
@@ -185,15 +187,20 @@ def list_files():
     
     try:
         files = []
-        for filename in os.listdir(current_config.CACHE_DIR):
-            file_path = os.path.join(current_config.CACHE_DIR, filename)
-            if os.path.isfile(file_path):
-                stat = os.stat(file_path)
-                files.append({
-                    'name': filename,
-                    'size': stat.st_size,
-                    'modified': datetime.fromtimestamp(stat.st_mtime).isoformat()
-                })
+        for root, _, filenames in os.walk(current_config.CACHE_DIR):
+            for filename in filenames:
+                file_path = os.path.join(root, filename)
+                if os.path.isfile(file_path):
+                    stat = os.stat(file_path)
+                    rel_path = os.path.relpath(file_path, current_config.CACHE_DIR)
+                    rel_path = rel_path.replace(os.sep, "/")
+                    folder, hash_name = (rel_path.split("/", 1) + [""])[:2]
+                    files.append({
+                        'filename': folder,
+                        'hash': hash_name,
+                        'size': stat.st_size,
+                        'modified': datetime.fromtimestamp(stat.st_mtime).isoformat()
+                    })
         
         logger.info(f"Listed {len(files)} cached files")
         return jsonify({'files': files, 'count': len(files)})

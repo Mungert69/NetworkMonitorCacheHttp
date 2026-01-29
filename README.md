@@ -97,7 +97,7 @@ POST /api/cache/{filename}/{hash}
 Headers: X-API-Key: your-api-key
 Body: multipart/form-data with 'file' field
 ```
-Uploads a file to the cache with hash validation.
+Uploads a file to the cache with hash validation. Files are stored under `<CACHE_DIR>/<filename>/<hash>`.
 
 **Response:**
 ```json
@@ -129,7 +129,8 @@ Lists all cached files with metadata.
 {
   "files": [
     {
-      "name": "file1.hash",
+      "filename": "context-qwen-3.gguf",
+      "hash": "sha256-hash",
       "size": 1024000,
       "modified": "2023-01-01T12:00:00"
     }
