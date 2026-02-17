@@ -68,9 +68,15 @@ The build script:
 
 1. **Loads configuration** from `container-config.env` if it exists
 2. **Validates required files** (Dockerfile, requirements.txt, app.py)
-3. **Builds Docker image** with both tag and latest
-4. **Optionally tests container** if `TEST_CONTAINER=true`
-5. **Provides usage instructions** for running the container
+3. **Optionally tests container locally** if `TEST_CONTAINER=true`
+4. **Builds and pushes multi-arch image** (linux/amd64 and linux/arm64) with Docker Buildx
+5. **Tags both version and latest** on publish
+6. **Provides usage instructions** for running the container
+
+### Multi-Arch Build Variables
+
+- `CONTAINER_PLATFORMS` - Target platforms for Buildx (default: `linux/amd64,linux/arm64`)
+- `BUILDER_NAME` - Docker Buildx builder name (default: `multiarch-builder`)
 
 ## Running the Container
 

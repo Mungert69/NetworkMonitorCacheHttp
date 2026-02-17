@@ -15,7 +15,11 @@ TAG="${CONTAINER_TAG:-latest}"
 # Read repo from environment, config file, or use default
 REPO="${CONTAINER_REPO:-mungert/flask-cache-server}"
 
-echo "Building NetworkMonitorCacheHttp container: $REPO:$TAG  (CONFIG=$CONFIG)"
+PLATFORMS="${CONTAINER_PLATFORMS:-linux/amd64,linux/arm64}"
+BUILDER_NAME="${BUILDER_NAME:-multiarch-builder}"
+
+echo "Building NetworkMonitorCacheHttp multi-arch container: $REPO:$TAG  (CONFIG=$CONFIG)"
+echo "Platforms: $PLATFORMS"
 
 # Validate required files exist
 if [ ! -f "Dockerfile" ]; then
@@ -33,17 +37,14 @@ if [ ! -f "app.py" ]; then
     exit 1
 fi
 
-# Build the Docker image
-echo "Building Docker image..."
-docker build \
-    -t "$REPO:$TAG" \
-    -t "$REPO:latest" \
-    .
-
-echo "Docker image built successfully: $REPO:$TAG"
-
-# Test the container (optional)
+# Test the container (optional, uses local single-arch build)
 if [ "${TEST_CONTAINER:-false}" = "true" ]; then
+    echo "Building local test image..."
+    docker build \
+        -t "$REPO:$TAG" \
+        -t "$REPO:latest" \
+        .
+
     echo "Testing container..."
     
     # Run container in background for testing
@@ -72,6 +73,21 @@ if [ "${TEST_CONTAINER:-false}" = "true" ]; then
     docker rm "$CONTAINER_ID" > /dev/null 2>&1
     echo "Container test completed successfully"
 fi
+
+echo "Building and pushing multi-arch image with buildx..."
+docker buildx inspect "$BUILDER_NAME" > /dev/null 2>&1 || docker buildx create --name "$BUILDER_NAME" --use
+docker buildx use "$BUILDER_NAME"
+docker buildx inspect --bootstrap > /dev/null
+
+docker buildx build \
+    --platform "$PLATFORMS" \
+    --file ./Dockerfile \
+    --tag "$REPO:$TAG" \
+    --tag "$REPO:latest" \
+    --push \
+    .
+
+echo "Multi-arch image published successfully: $REPO:$TAG"
 
 echo "Build completed successfully!"
 echo "To run the container:"
