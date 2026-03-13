@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for Flask Cache Server
 
 # Build stage
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Set working directory
 WORKDIR /app
@@ -41,14 +41,14 @@ USER cacheuser
 
 # Add local bin to PATH
 ENV PATH=/home/cacheuser/.local/bin:$PATH
-ENV PYTHONPATH=/home/cacheuser/.local/lib/python3.11/site-packages:$PYTHONPATH
+ENV PYTHONPATH=/home/cacheuser/.local/lib/python3.11/site-packages
 
 # Expose port
 EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/health || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=5)" || exit 1
 
 # Start the application
 CMD ["python", "app.py"]
