@@ -35,9 +35,11 @@ app.config.from_object(current_config)
 # Ensure cache directory exists
 os.makedirs(current_config.CACHE_DIR, exist_ok=True)
 
-def validate_api_key():
-    """Validate API key from request headers."""
+def validate_api_key(allow_query_key=False):
+    """Validate API key from request headers (or query string when allowed)."""
     api_key = request.headers.get('X-API-Key')
+    if allow_query_key and not api_key:
+        api_key = request.args.get('api_key')
     if not api_key or api_key != current_config.API_KEY:
         logger.warning(f"Invalid API key attempt: {api_key}")
         abort(401, description="Invalid API key")
@@ -130,7 +132,7 @@ def upload_file(filename, file_hash):
 @app.route('/api/cache/<filename>/<file_hash>/download', methods=['GET'])
 def download_file(filename, file_hash):
     """Download a file by filename and hash."""
-    validate_api_key()
+    validate_api_key(allow_query_key=True)
 
     try:
         file_path = get_file_path(filename, file_hash)
