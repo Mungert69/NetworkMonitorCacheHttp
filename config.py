@@ -28,7 +28,7 @@ class Config:
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
     
     # File upload settings
-    ALLOWED_EXTENSIONS = {'gguf', 'bin', 'txt', 'json', 'dat'}
+    ALLOWED_EXTENSIONS = {'gguf', 'bin', 'txt', 'json', 'dat', 'jpg', 'jpeg', 'png', 'gif', 'webp'}
     
     # Rate limiting (if enabled)
     RATE_LIMIT_ENABLED = os.environ.get('RATE_LIMIT_ENABLED', 'False').lower() == 'true'
