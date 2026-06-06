@@ -40,14 +40,37 @@ fi
 
 print_status "Python and pip are available"
 
-# Install security tools
+# Check if we're in a virtual environment or need to create one
 echo ""
-echo "📦 Installing security tools..."
+echo "📦 Setting up environment..."
 echo "=================================="
+
+VENV_DIR="venv"
+VENV_ACTIVE=false
+
+# Check if we're already in a virtual environment
+if [[ "$VIRTUAL_ENV" != "" ]]; then
+    print_status "Already in virtual environment: $VIRTUAL_ENV"
+    VENV_ACTIVE=true
+else
+    # Create virtual environment if it doesn't exist
+    if [[ ! -d "$VENV_DIR" ]]; then
+        print_status "Creating virtual environment..."
+        python3 -m venv "$VENV_DIR"
+    fi
+    
+    # Activate virtual environment
+    print_status "Activating virtual environment..."
+    source "$VENV_DIR/bin/activate"
+    VENV_ACTIVE=true
+fi
+
+# Upgrade pip in virtual environment
+print_status "Upgrading pip..."
+pip install --upgrade pip
 
 # Install development dependencies
 print_status "Installing security scanning tools..."
-pip install --upgrade pip
 pip install -r requirements-dev.txt
 
 print_status "Security tools installed successfully"
@@ -154,3 +177,9 @@ echo "   - Review any warnings above"
 echo "   - Keep dependencies updated regularly"
 echo "   - Monitor for new security alerts"
 echo "   - Run this script regularly (e.g., weekly)"
+
+# Deactivate virtual environment if we activated it
+if [[ "$VENV_ACTIVE" == "true" && "$VIRTUAL_ENV" == "" ]]; then
+    print_status "Deactivating virtual environment..."
+    deactivate
+fi
