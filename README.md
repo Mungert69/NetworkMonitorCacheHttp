@@ -232,7 +232,42 @@ The server returns appropriate HTTP status codes:
 - `413`: Payload too large
 - `500`: Internal server error
 
-## 🧪 Testing
+## 🔒 Security
+
+### Running Security Checks
+
+Run the comprehensive security check script:
+
+```bash
+./run-security-check.sh
+```
+
+This script will:
+- Install security scanning tools (safety, pip-audit)
+- Check for vulnerabilities in dependencies
+- Verify package versions
+- Check file permissions
+- Provide security recommendations
+
+**Example output:**
+```bash
+🔒 Starting Security Check...
+==================================
+[✓] Python and pip are available
+📦 Installing security tools...
+==================================
+[✓] Installing security scanning tools...
+[✓] Security tools installed successfully
+🔍 Running Security Scans...
+==================================
+[✓] Running safety vulnerability check...
+[✓] Running detailed safety check...
+[✓] Running pip-audit comprehensive security check...
+📋 Security Summary
+==================================
+[✓] Flask Cache Server security check completed
+✅ Security check completed!
+```
 
 ### Manual Testing with curl
 
