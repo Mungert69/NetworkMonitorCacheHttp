@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pip list)"
+      "Bash(pip list)",
+      "Bash(pip install *)",
+      "Bash(git add *)"
     ]
   },
   "$version": 4
