@@ -3,7 +3,8 @@
     "allow": [
       "Bash(pip list)",
       "Bash(pip install *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   },
   "$version": 4

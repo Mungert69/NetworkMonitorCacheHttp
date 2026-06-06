@@ -1,8 +1,7 @@
-version: '3.8'
 
 services:
   networkmonitorcachehttp:
-    image: mungert/networkmonitorcachehttp:1.0.0
+    image: mungert/networkmonitorcachehttp:1.0.1
     ports:
       - "5000:5000"
     env_file:
