@@ -198,6 +198,18 @@ Configure NetworkMonitorLLM to use this cache server by updating the `appsetting
 }
 ```
 
+### Cache scope
+
+CacheHttp stores static GGUF prompt-cache files only. NetworkMonitorLLM derives
+the cache key from stable system-prompt content, excluding session-specific
+agent location and device context; that information is injected at runtime.
+This lets equivalent sessions reuse one cached GGUF object rather than creating
+one upload per session.
+
+Chat history is not stored here. API-backed TurboLLM/HugLLM histories remain in
+Redis, while local TestLLM sessions keep their display history and recoverable
+llama.cpp context in the originating Hugging Face Space's `/data` storage.
+
 ## 📊 Monitoring
 
 ### Health Check
