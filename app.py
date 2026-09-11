@@ -7,8 +7,9 @@ Provides endpoints for checking file existence, uploading files, and downloading
 """
 
 import os
-import hashlib
+import hmac
 import logging
+import tempfile
 from datetime import datetime
 from flask import Flask, request, send_file, jsonify, abort
 from flask_cors import CORS
@@ -40,8 +41,8 @@ def validate_api_key(allow_query_key=False):
     api_key = request.headers.get('X-API-Key')
     if allow_query_key and not api_key:
         api_key = request.args.get('api_key')
-    if not api_key or api_key != current_config.API_KEY:
-        logger.warning(f"Invalid API key attempt: {api_key}")
+    if not api_key or not hmac.compare_digest(api_key, current_config.API_KEY):
+        logger.warning("Invalid API key attempt")
         abort(401, description="Invalid API key")
 
 def get_file_path(filename, file_hash):
@@ -94,26 +95,36 @@ def upload_file(filename, file_hash):
             logger.warning(f"Empty filename for upload: {filename}.{file_hash}")
             return jsonify({'error': 'No file selected'}), 400
 
-        file.seek(0, os.SEEK_END)
-        file_size = file.tell()
-        file.seek(0)
-
-        if file_size > current_config.MAX_CONTENT_LENGTH:
-            logger.warning(
-                f"File too large for upload: {filename}.{file_hash} ({file_size} bytes > {current_config.MAX_CONTENT_LENGTH} bytes)"
-            )
-            return jsonify({'error': f'File too large. Maximum size: {current_config.MAX_CONTENT_LENGTH} bytes'}), 413
-
-        file_content = file.read()
         provided_hash = request.form.get('hash')
         if provided_hash and provided_hash != file_hash:
             logger.warning(f"Hash mismatch for {filename}: provided={provided_hash}, expected={file_hash}")
             return jsonify({'error': 'Hash mismatch'}), 400
 
         file_path = get_file_path(filename, file_hash)
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'wb') as f:
-            f.write(file_content)
+        file_dir = os.path.dirname(file_path)
+        os.makedirs(file_dir, exist_ok=True)
+
+        # Stream to a temporary file in the destination directory. This keeps
+        # memory usage bounded and makes replacement of an existing entry
+        # atomic, so downloads never observe a partially written cache file.
+        temp_path = None
+        file_size = 0
+        try:
+            with tempfile.NamedTemporaryFile(dir=file_dir, delete=False) as temp_file:
+                temp_path = temp_file.name
+                while chunk := file.stream.read(1024 * 1024):
+                    file_size += len(chunk)
+                    if file_size > current_config.MAX_CONTENT_LENGTH:
+                        raise RequestEntityTooLarge()
+                    temp_file.write(chunk)
+            os.replace(temp_path, file_path)
+            temp_path = None
+        finally:
+            if temp_path is not None:
+                try:
+                    os.unlink(temp_path)
+                except FileNotFoundError:
+                    pass
 
         logger.info(f"Successfully uploaded: {filename}.{file_hash} ({file_size} bytes)")
         return jsonify({
